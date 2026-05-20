@@ -2,10 +2,12 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 
-def client_main_menu(has_channel: bool) -> InlineKeyboardMarkup:
+def client_main_menu(has_channel: bool, trial_days: int = 0) -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     if has_channel:
         b.button(text="📺 Мой канал", callback_data="client:my_channel")
+        if trial_days > 0:
+            b.button(text=f"🎁 Бесплатный тест ({trial_days} дн.)", callback_data="client:trial")
         b.button(text="💳 Оплатить размещение", callback_data="client:pay")
     else:
         b.button(text="➕ Добавить канал", callback_data="client:add_channel")
@@ -14,15 +16,18 @@ def client_main_menu(has_channel: bool) -> InlineKeyboardMarkup:
     return b.as_markup()
 
 
-def client_channel_menu(client_id: int, forward_mode: str) -> InlineKeyboardMarkup:
+def client_channel_menu(client_id: int, forward_mode: str, trial_days: int = 0) -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     label_forward = "✅ Forward" if forward_mode == "forward" else "Forward"
     label_copy = "✅ Copy" if forward_mode == "copy" else "Copy"
     b.button(text=label_forward, callback_data=f"client:mode:{client_id}:forward")
     b.button(text=label_copy, callback_data=f"client:mode:{client_id}:copy")
+    if trial_days > 0:
+        b.button(text=f"🎁 Тест ({trial_days} дн.)", callback_data="client:trial")
     b.button(text="💳 Оплатить / продлить", callback_data="client:pay")
     b.button(text="⬅️ Назад", callback_data="client:back")
-    b.adjust(2, 1, 1)
+    rows = (2, 1, 1, 1) if trial_days > 0 else (2, 1, 1)
+    b.adjust(*rows)
     return b.as_markup()
 
 

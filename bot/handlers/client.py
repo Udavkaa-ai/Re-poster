@@ -63,12 +63,12 @@ async def _send_menu(message: Message, settings: Settings):
     if client:
         await message.answer(
             _client_summary(client, settings.trigger_emoji),
-            reply_markup=client_main_menu(has_channel=True),
+            reply_markup=client_main_menu(has_channel=True, trial_days=settings.trial_days),
         )
     else:
         await message.answer(
             HELP_TEXT.format(trigger=settings.trigger_emoji),
-            reply_markup=client_main_menu(has_channel=False),
+            reply_markup=client_main_menu(has_channel=False, trial_days=settings.trial_days),
         )
 
 
@@ -87,7 +87,7 @@ async def cmd_help(message: Message, settings: Settings):
 async def cb_help(cq: CallbackQuery, settings: Settings):
     await cq.message.edit_text(
         HELP_TEXT.format(trigger=settings.trigger_emoji),
-        reply_markup=client_main_menu(has_channel=False),
+        reply_markup=client_main_menu(has_channel=False, trial_days=settings.trial_days),
     )
     await cq.answer()
 
@@ -99,12 +99,12 @@ async def cb_back(cq: CallbackQuery, settings: Settings):
     if client:
         await cq.message.edit_text(
             _client_summary(client, settings.trigger_emoji),
-            reply_markup=client_main_menu(has_channel=True),
+            reply_markup=client_main_menu(has_channel=True, trial_days=settings.trial_days),
         )
     else:
         await cq.message.edit_text(
             HELP_TEXT.format(trigger=settings.trigger_emoji),
-            reply_markup=client_main_menu(has_channel=False),
+            reply_markup=client_main_menu(has_channel=False, trial_days=settings.trial_days),
         )
     await cq.answer()
 
@@ -118,7 +118,7 @@ async def cb_my_channel(cq: CallbackQuery, settings: Settings):
     client = rows[0]
     await cq.message.edit_text(
         _client_summary(client, settings.trigger_emoji),
-        reply_markup=client_channel_menu(client["id"], client["forward_mode"]),
+        reply_markup=client_channel_menu(client["id"], client["forward_mode"], settings.trial_days),
     )
     await cq.answer()
 
@@ -138,9 +138,41 @@ async def cb_set_mode(cq: CallbackQuery, settings: Settings):
     client = await db.get_client(client_id)
     await cq.message.edit_text(
         _client_summary(client, settings.trigger_emoji),
-        reply_markup=client_channel_menu(client_id, mode),
+        reply_markup=client_channel_menu(client_id, mode, settings.trial_days),
     )
     await cq.answer(f"Режим: {mode}")
+
+
+@router.callback_query(F.data == "client:trial")
+async def cb_trial(cq: CallbackQuery, settings: Settings):
+    if settings.trial_days <= 0:
+        await cq.answer("Тестовый период отключён", show_alert=True)
+        return
+    rows = await db.list_clients_for_owner(cq.from_user.id)
+    if not rows:
+        await cq.answer("Сначала добавь канал", show_alert=True)
+        return
+    client = rows[0]
+    new_until = await db.extend_subscription(client["id"], settings.trial_days)
+    await db.record_payment(
+        client_id=client["id"],
+        client_chat_id=client["chat_id"],
+        user_id=cq.from_user.id,
+        amount=0,
+        currency="TRIAL",
+        days_added=settings.trial_days,
+        payment_charge_id=None,
+        telegram_payment_charge_id=None,
+    )
+    client = await db.get_client(client["id"])
+    await cq.message.edit_text(
+        f"🎉 Тестовый период активирован до <b>{new_until.date().isoformat()}</b>.\n\n"
+        f"Публикуй посты в своём канале с {settings.trigger_emoji} в тексте — "
+        f"они автоматически появятся в агрегаторе.\n\n"
+        + _client_summary(client, settings.trigger_emoji),
+        reply_markup=client_main_menu(has_channel=True, trial_days=settings.trial_days),
+    )
+    await cq.answer("Тест активирован ✅")
 
 
 @router.callback_query(F.data == "client:add_channel")
@@ -192,5 +224,5 @@ async def on_forwarded_post(message: Message, state: FSMContext, bot: Bot, setti
     client = next((c for c in rows if c["chat_id"] == chat_id), rows[0])
     await message.answer(
         "✅ Канал привязан.\n\n" + _client_summary(client, settings.trigger_emoji),
-        reply_markup=client_main_menu(has_channel=True),
+        reply_markup=client_main_menu(has_channel=True, trial_days=settings.trial_days),
     )

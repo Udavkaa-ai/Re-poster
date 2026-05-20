@@ -75,7 +75,8 @@ CREATE TABLE IF NOT EXISTS processed (
 
 CREATE TABLE IF NOT EXISTS payments (
     id BIGSERIAL PRIMARY KEY,
-    client_id BIGINT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    client_id BIGINT REFERENCES clients(id) ON DELETE SET NULL,
+    client_chat_id BIGINT,
     user_id BIGINT NOT NULL,
     amount BIGINT NOT NULL,
     currency TEXT NOT NULL DEFAULT 'XTR',
@@ -84,6 +85,13 @@ CREATE TABLE IF NOT EXISTS payments (
     days_added INTEGER NOT NULL,
     created_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Migrations for installs that ran the previous (CASCADE) schema:
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS client_chat_id BIGINT;
+ALTER TABLE payments ALTER COLUMN client_id DROP NOT NULL;
+ALTER TABLE payments DROP CONSTRAINT IF EXISTS payments_client_id_fkey;
+ALTER TABLE payments ADD CONSTRAINT payments_client_id_fkey
+    FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL;
 """
 
 
@@ -202,6 +210,7 @@ async def mark_processed(chat_id: int, msg_id: int) -> None:
 
 async def record_payment(
     client_id: int,
+    client_chat_id: int,
     user_id: int,
     amount: int,
     currency: str,
@@ -212,11 +221,11 @@ async def record_payment(
     await pool().execute(
         """
         INSERT INTO payments
-            (client_id, user_id, amount, currency, days_added,
+            (client_id, client_chat_id, user_id, amount, currency, days_added,
              payment_charge_id, telegram_payment_charge_id)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         """,
-        client_id, user_id, amount, currency, days_added,
+        client_id, client_chat_id, user_id, amount, currency, days_added,
         payment_charge_id, telegram_payment_charge_id,
     )
 

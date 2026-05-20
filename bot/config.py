@@ -25,6 +25,7 @@ class Settings:
     aggregator_chat: int | str
     trigger_emoji: str
     price_stars_30d: int
+    trial_days: int
     database_url: str
 
 
@@ -35,5 +36,6 @@ def load_settings() -> Settings:
         aggregator_chat=_parse_chat_id(os.environ["AGGREGATOR_CHANNEL_ID"]),
         trigger_emoji=os.environ.get("TRIGGER_EMOJI", "🤑"),
         price_stars_30d=int(os.environ.get("PRICE_STARS_30D", "500")),
+        trial_days=int(os.environ.get("TRIAL_DAYS", "30")),
         database_url=os.environ["DATABASE_URL"],
     )

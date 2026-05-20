@@ -82,8 +82,10 @@ async def on_payment_success(message: Message, settings: Settings):
         return
 
     new_until = await db.extend_subscription(client_id, days)
+    client_row = await db.get_client(client_id)
     await db.record_payment(
         client_id=client_id,
+        client_chat_id=client_row["chat_id"] if client_row else 0,
         user_id=message.from_user.id,
         amount=sp.total_amount,
         currency=sp.currency,
