@@ -24,9 +24,14 @@ Telegram-бот для агрегатора реферальных постов,
 ```bash
 pip install -r requirements.txt
 cp .env.example .env
-# заполнить BOT_TOKEN, OWNER_USER_ID, AGGREGATOR_CHANNEL_ID
+# заполнить BOT_TOKEN, OWNER_USER_ID, AGGREGATOR_CHANNEL_ID, DATABASE_URL
 python -m bot.main
 ```
+
+В качестве БД используется PostgreSQL (asyncpg). На Railway/Render просто
+подключи managed Postgres и проставь `DATABASE_URL` — он подхватывается
+автоматически. Параметр `?sslmode=require` в URL поддерживается (стрипается
+и транслируется в `ssl=require` для asyncpg).
 
 Для приёма Stars-платежей в `@BotFather` ничего настраивать не нужно — `provider_token` для XTR оставляется пустым.
 
@@ -40,7 +45,7 @@ python -m bot.main
 bot/
 ├── main.py               # entrypoint, Dispatcher + routers
 ├── config.py             # env → Settings
-├── db.py                 # SQLite, async через aiosqlite
+├── db.py                 # PostgreSQL, async через asyncpg
 ├── keyboards.py          # inline-меню
 └── handlers/
     ├── forwarder.py      # channel_post → проверка триггера → репост

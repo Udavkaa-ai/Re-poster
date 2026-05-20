@@ -22,7 +22,7 @@ def _is_owner(user_id: int, settings: Settings) -> bool:
 
 def _client_card_text(client, default_trigger: str) -> str:
     title = client["chat_title"] or client["chat_username"] or str(client["chat_id"])
-    paid = client["paid_until"] or "—"
+    paid = client["paid_until"].isoformat() if client["paid_until"] else "—"
     active = "🟢 active" if db.subscription_active(client) else "⚪️ inactive"
     return (
         f"<b>{title}</b>\n"

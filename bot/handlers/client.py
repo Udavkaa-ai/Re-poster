@@ -44,9 +44,9 @@ def _client_summary(client, default_trigger: str) -> str:
     trigger = client["trigger_emoji"] or default_trigger
     paid_until = client["paid_until"]
     if paid_until and db.subscription_active(client):
-        status = f"✅ Активна до {paid_until[:10]}"
+        status = f"✅ Активна до {paid_until.date().isoformat()}"
     elif paid_until:
-        status = f"⛔️ Истекла {paid_until[:10]}"
+        status = f"⛔️ Истекла {paid_until.date().isoformat()}"
     else:
         status = "⏳ Не оплачена"
     return (
